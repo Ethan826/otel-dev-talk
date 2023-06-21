@@ -91,7 +91,7 @@
     \item[Enhanced Debugging] With better visibility, engineers can identify,
       understand, and resolve issues faster.
     \item[Performance Monitoring] OTel helps you monitor system performance and
-      user behavior in real-time, helping you make data-driven decisions to
+      user behavior in real time, helping you make data-driven decisions to
       improve your services' performance and user experience.
     \item[Future-Proof] OTel's wide adoption and large community likely mean
       that as new standards and best practices emerge, OTel will evolve with them.
@@ -188,7 +188,7 @@
   It's in the HTTP headers, so don't store sensitive data.
 
   ``Common use cases include~.~.~. Account Identification, User Ids, Product
-  Ids, and origin IPs.~.~.~.  Passing these down your stack allows you to then
+  Ids, and origin IPs.~.~.~. Passing these down your stack allows you to then
   add them to your Spans in downstream services to make it easier to filter when
   you're searching in your Observability back-end.''\footcite{otel-baggage}
 \end{frame}
@@ -197,10 +197,11 @@
 
 \begin{frame}{How does this distributed stuff work?}
 
-  Distributed tracing is hard because it's tricky to reconstruct cause and
-  effect. In distributed systems, many separate services---some internal and
-  some external---may collaborate to produce a final result. The secret sauce
-  for OpenTelemetry can be split into three pieces:
+  Distributed tracing is hard because it's tricky to reconstruct
+  cause-and-effect relationships. In distributed systems, many separate
+  services---some internal and some external---may collaborate to produce a
+  final result. The secret sauce for OpenTelemetry can be split into three
+  pieces:
 
   \begin{enumerate}
     \item A trace ID, additional correlation IDs, and other metadata,
@@ -213,7 +214,7 @@
   \vspace{1em}
 
   In short, OpenTelemetry is a well-thought-out system for assigning IDs in a
-  tree-like structure, passing them across service boundaries, and allowing
+  tree-like structure, passing them across service boundaries, and then allowing
   Humpty-Dumpty to be put back together again.
 
 \end{frame}
@@ -221,10 +222,23 @@
 \begin{frame}{Context}
   \begin{quote}
 
-    A \texttt{Context} is a propagation mechanism which [sic] carries
-    execution-scoped values across API boundaries and between logically associated
-    execution units.  Cross-cutting concerns access their data in-process using
-    the same shared \texttt{Context} object.\footcite{otel-context}
+    In order for OpenTelemetry to work, it must store and propagate important
+    telemetry data. For example, when a request is received and a span is
+    started it must be available to a component which creates its child span. To
+    solve this problem, OpenTelemetry stores the span in the
+    Context.\footcite{otel-context-js}
+
+  \end{quote}
+\end{frame}
+
+\begin{frame}{Context (cont'd)}
+  \begin{quote}
+
+    A \lstinline{Context} is a propagation mechanism which [sic] carries
+    execution-scoped values across API boundaries and between logically
+    associated execution units. Cross-cutting concerns access their data
+    in-process using the same shared \lstinline{Context}
+    object.\footcite{otel-context}
 
   \end{quote}
 
@@ -242,35 +256,311 @@
 
 \end{frame}
 
+\begin{frame}{Context Propagation}
+  Context Propagation
 
-\section{Auto SDK}
-\section{Manual}
+  \vspace{1em}
 
-\section{Collectors and Exporters}
+  \begin{quote}
 
-\section{Backends}
-% \section{Instrumentation}
-% \begin{frame}{Adding Instrumentation}
-%   % Content goes here
-% \end{frame}
+    Propagation is the mechanism that moves data between [sic] services and
+    processes. Although not limited to tracing, it is what allows traces to
+    build causal information about a system across services that are arbitrarily
+    distributed across process and network
+    boundaries.\footcite{otel-propagation}
 
-% \section{Collectors and Exporters}
-% \begin{frame}{Data Collection and Export}
-%   % Content goes here
-% \end{frame}
+  \end{quote}
+\end{frame}
 
-% \section{Visualizing and Analyzing Data}
-% \begin{frame}{Tools and Dashboards}
-%   % Content goes here
-% \end{frame}
 
-% \section{Use Cases}
-% \begin{frame}{Real-World Use Cases}
-%   % Content goes here
-% \end{frame}
+\begin{frame}{Context Propagation (cont'd)}
 
-% \section{Conclusion}
-% \begin{frame}{Summary and Next Steps}
-%   % Content goes here
-% \end{frame}
+  You can think of a \lstinline{Propagators} as serializers/deserializers or
+  marshallers/unmarshallers for \lstinline{Context}.
+
+  \begin{quote}
+
+    Cross-cutting concerns send their state to the next process using
+    \lstinline{Propagators}, which are defined as objects used to read and write
+    context data to and from messages exchanged by the applications. Each
+    concern creates a set of \lstinline{Propagators} for every supported
+    Propagator type.\footcite{otel-propagators}
+
+  \end{quote}
+\end{frame}
+
+\section{API, SDK, and Semantic Conventions}
+
+\begin{frame}{API and SDK}
+
+  Remember my talks on Onion Architecture and SOLID, specifically the
+  Dependency-Inversion Principle? What, you think you can pick up in Season 3
+  and not miss anything?
+
+  \vspace{1em}
+
+  Okay, VERY BRIEFLY THEN.
+
+\end{frame}
+
+\section{Brief aside, wherein Ethan gets back up on his Dependency-Inversion soapbox}
+
+\begin{frame}[fragile]{Not dependency inverted}
+  \begin{lstlisting}[basicstyle=\footnotesize]
+class MyBusinessLogic {
+  private logger: ConsoleLogger;
+  private businessDataWriter: MySqlBusinessDataWriter;
+
+  constructor() {
+    this.logger = new ConsoleLogger();
+    this.businessDataWriter = new MySqlBusinessDataWriter();
+  }
+
+  public processBusinessData(businessData: BusinessData) {
+    this.businessDataWriter
+      .writeBusinessData(businessData)
+      .then(() => this.logger.logDebug("It worked fine"))
+      .catch((e) => this.logger.logError(`We had a problem: ${e}`));
+  }
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Not dependency inverted (cont'd)}
+
+  Requirements change, hotshot: let's use Pino instead of the
+  \lstinline{console} to do logging, and let's use \lstinline{PostgreSQL}
+  instead of \lstinline{MySql} for storing the data.
+
+  \vspace{1em}
+
+  Should the implementation have to change for our business-logic class if only
+  the dependencies, not the business logic, changed?
+
+  \vspace{1em}
+
+  Can you do that without changing the innards of \lstinline{MyBusinessLogic} as
+  presently written? Does this violate the Dependency-Inversion Principle? Does
+  it violate the Open--Closed Principle? Does a business stakeholder now
+  potentially have to care about your database or logging choice?
+
+  \vspace{1em}
+
+  Answer Key: No (uh-oh) \\
+  No (whoops), Yes (whoops), Yes (whoops), Yes (whoops).
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Dependency inverted}
+  \begin{lstlisting}[basicstyle=\footnotesize]
+type LoggingService = {
+  logDebug: (message: string) => void;
+  logError: (message: string) => void;
+};
+
+type BusinessDataWriterService = {
+  writeBusinessData: (businessData: BusinessData) => Promise<void>;
+};
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Dependency inverted (cont'd)}
+  \begin{lstlisting}[basicstyle=\footnotesize]
+class MyBusinessLogic {
+  constructor(
+    private logger: LoggingService,
+    private businessDataWriter: BusinessDataWriterService
+  ) {}
+
+  public processBusinessData(businessData: BusinessData) {
+    this.businessDataWriter
+      .writeBusinessData(businessData)
+      .then(() => this.logger.logDebug("It worked fine"))
+      .catch((e) => this.logger.logError(`We had a problem: ${e}`));
+  }
+}
+  \end{lstlisting}
+\end{frame}
+
+
+\begin{frame}[fragile]{Dependency inverted (cont'd)}
+  \begin{lstlisting}[basicstyle=\footnotesize]
+// New file pino-logger.ts
+class PinoLogger implements LoggingService { /* ...impl */ }
+
+// New file postgres-sql-writer.ts
+class PostgreSqlBusinessDataWriter implements BusinessDataWriterService {
+  /* ...impl */ 
+}
+
+// In main.ts, update this
+new MyBusinessLogic(new ConsoleLogger(), new MySqlBusinessDataWriter());
+
+// to this
+new MyBusinessLogic(new PinoLogger(), new PostgreSqlBusinessDataWriter());
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Dependency inverted (cont'd)}
+
+  Requirements change, hotshot: let's use Pino instead of the
+  \lstinline{console} to do logging, and let's use \lstinline{PostgreSQL}
+  instead of \lstinline{MySql} for storing the data.
+
+  \vspace{1em}
+
+  Should the implementation have to change for our business-logic class if only
+  the dependencies, not the business logic, changed?
+
+  \vspace{1em}
+
+  Can you do that without changing the innards of \lstinline{MyBusinessLogic} as
+  presently written? Does this violate the Dependency-Inversion Principle? Does
+  it violate the Open--Closed Principle? Does a business stakeholder now
+  potentially have to care about your database or logging choice?
+
+  \vspace{1em}
+
+  Answer Key: Heck no! \\
+  heck yes, heck no, heck no, heck no.
+
+\end{frame}
+
+\begin{frame}{Dependency inverted (cont'd)}
+
+  How did we do this?
+
+  \vspace{1em}
+
+  \begin{quote}
+
+    Abstractions should not depend on details. Details (concrete
+    implementations) should depend on abstractions.\footcite{enwiki:1148320529}
+
+  \end{quote}
+
+\end{frame}
+
+\section{API, SDK, and Semantic Conventions, resumed}
+
+\begin{frame}{API and SDK (cont'd)}
+  The API is the dependency-inverted abstraction. Remember, depend on
+  abstractions.
+
+  \vspace{1em}
+
+  \begin{quote}
+
+    API packages consist of the cross-cutting public interfaces used for
+    instrumentation. Any portion of an OpenTelemetry client which is imported
+    into third-party libraries and application code is considered part of the
+    API.\footcite{otel-overview}
+
+  \end{quote}
+
+\end{frame}
+
+\begin{frame}{API and SDK (cont'd)}
+
+  The SDK is the dependency-inverted set of concretions. The actual
+  implementations.
+
+  \vspace{1em}
+
+  \begin{quote}
+
+    The SDK is the implementation of the API provided by the OpenTelemetry
+    project. Within an application, the SDK is installed and managed by the
+    application owner. Note that the SDK includes additional public interfaces
+    which are not considered part of the API package, as they are not
+    cross-cutting concerns. These public interfaces are defined as constructors
+    and plugin interfaces. Application owners use the SDK constructors; plugin
+    authors use the SDK plugin interfaces. Instrumentation authors MUST NOT
+    directly reference any SDK package of any kind, only the
+    API.\footcite{otel-overview}
+
+  \end{quote}
+\end{frame}
+
+\begin{frame}{Semantic Conventions}
+
+  ``Semantic Conventions'' is the name for what amounts to a set of constants
+  specified to allow naming things consistently. They live in their own repo,
+  https://github.com/open-telemetry/semantic-conventions.
+
+\end{frame}
+
+\section{Practical Use of OpenTelemetry}
+\begin{frame}{Auto Instrumentation}
+
+  \begin{quote}
+
+    \textbf{Zero-touch model}: The instrumented application code is unchanged,
+    and the OpenTelemetry SDK and instrumentation libraries are initialized by a
+    separate component and configured independently from the instrumented code.
+    This model is the easiest one to implement for service owners, but it's not
+    available in every language and normally requires being able to modify the
+    command used to start the application, for example, attaching the Java agent
+    or using Python's \lstinline{telemetry-instrument} command, or having access
+    to configure the runtime environment as in .NET's CLR profiler. In some
+    cases, this model can limit the options to configure or customize certain
+    aspects of instrumentation libraries.\footcite[ch.~4]{practical-otel}
+
+  \end{quote}
+
+\end{frame}
+
+\begin{frame}{Manual Instrumentation}
+
+  \textbf{Implementation model}: The OpenTelemetry SDK and instrumentation
+  libraries are configured and initialized by the application owner as part of the
+  instrumented application code, normally happening during application startup.
+  This may provide more flexibility to configure instrumentations, but it requires
+  extra effort to install and maintain. In some languages, like Java, this model
+  can have additional drawbacks, as instrumentation libraries that dynamically
+  inject bytecode in the agent model cover a wider set of instrumented libraries
+  and frameworks.\footcite[ch.~4]{practical-otel}
+
+\end{frame}
+
+\begin{frame}{Automatic v.~Manual Instrumentation}
+
+  In practice, a combination of both may be used, with auto instrumentation
+  covering standard libraries and frameworks, and manual instrumentation filling
+  in the gaps for custom or unsupported libraries, or for more granular control
+  over spans and attributes.
+
+\end{frame}
+\begin{frame}{Getting Started with OpenTelemetry}
+  Explain the first steps in installing and using OpenTelemetry in a chosen language, including adding necessary dependencies and initializing OpenTelemetry in the application's main function.
+\end{frame}
+
+\begin{frame}{Instrumenting Code}
+  Describe how to instrument code, explaining how to create spans, set attributes, add events, and handle errors. Include example code to make this practical.
+\end{frame}
+
+\begin{frame}{Collecting and Exporting Data}
+  Discuss the OpenTelemetry Collector and how it can be used to receive, process, and export telemetry data. Describe the different exporters available, such as Jaeger, Zipkin, and Prometheus, and how to configure them.
+\end{frame}
+
+\begin{frame}{Visualizing Traces}
+  Show how to use a tool like Jaeger or Zipkin to visualize traces. Include screenshots of a trace and explain how to interpret it.
+\end{frame}
+
+\section{Conclusion}
+
+\begin{frame}{Conclusion}
+  Wrap up by summarizing the importance of OpenTelemetry for observability in modern, distributed systems and the benefits of its unified approach to traces, metrics, and logs. Highlight again the fact that OpenTelemetry is vendor-neutral, open-source, and widely adopted, which makes it a safe choice for most organizations.
+\end{frame}
+
+\begin{frame}{Further Reading}
+  Recommend resources for further reading or learning, such as the official OpenTelemetry documentation, relevant blog posts, tutorials, and books.
+\end{frame}
+
+\begin{frame}{Q\&A}
+  Leave time for questions and answers from the audience.
+\end{frame}
+
+
 \end{document}
