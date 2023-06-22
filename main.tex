@@ -21,6 +21,20 @@
   \tableofcontents
 \end{frame}
 
+\section{Let's dive right in}
+
+\begin{frame}{What is OpenTelemetry?}
+  \begin{enumerate}
+    \item Follow the steps at https://opentelemetry.io/docs/instrumentation/js/getting-started/nodejs/.
+    \item Follow the steps at https://opentelemetry.io/docs/instrumentation/js/exporters/.
+    \item Follow the steps at https://opentelemetry.io/docs/instrumentation/js/manual/\#acquiring-a-tracer.
+    \item Show prepared demo that adds DB calls.
+  \end{enumerate}
+
+
+  \lstinline[basicstyle=\tiny]{docker run --name some-postgres -p 5432:5432 -e POSTGRES_PASSWORD=mysecretpassword -d postgres}
+\end{frame}
+
 \section{Introduction}
 \begin{frame}{What is OpenTelemetry?}
 
@@ -532,35 +546,7 @@ new MyBusinessLogic(new PinoLogger(), new PostgreSqlBusinessDataWriter());
   over spans and attributes.
 
 \end{frame}
-\begin{frame}{Getting Started with OpenTelemetry}
-  Explain the first steps in installing and using OpenTelemetry in a chosen language, including adding necessary dependencies and initializing OpenTelemetry in the application's main function.
-\end{frame}
 
-\begin{frame}{Instrumenting Code}
-  Describe how to instrument code, explaining how to create spans, set attributes, add events, and handle errors. Include example code to make this practical.
-\end{frame}
-
-\begin{frame}{Collecting and Exporting Data}
-  Discuss the OpenTelemetry Collector and how it can be used to receive, process, and export telemetry data. Describe the different exporters available, such as Jaeger, Zipkin, and Prometheus, and how to configure them.
-\end{frame}
-
-\begin{frame}{Visualizing Traces}
-  Show how to use a tool like Jaeger or Zipkin to visualize traces. Include screenshots of a trace and explain how to interpret it.
-\end{frame}
-
-\section{Conclusion}
-
-\begin{frame}{Conclusion}
-  Wrap up by summarizing the importance of OpenTelemetry for observability in modern, distributed systems and the benefits of its unified approach to traces, metrics, and logs. Highlight again the fact that OpenTelemetry is vendor-neutral, open-source, and widely adopted, which makes it a safe choice for most organizations.
-\end{frame}
-
-\begin{frame}{Further Reading}
-  Recommend resources for further reading or learning, such as the official OpenTelemetry documentation, relevant blog posts, tutorials, and books.
-\end{frame}
-
-\begin{frame}{Q\&A}
-  Leave time for questions and answers from the audience.
-\end{frame}
-
+\section{Justin with some DevOps perspective}
 
 \end{document}
